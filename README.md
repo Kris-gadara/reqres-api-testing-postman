@@ -30,7 +30,10 @@ reqres-api-testing-postman/
 ├── Bug-Reports/
 │   └── BugReport.xlsx                           # Standard defect reporting sheet template
 ├── Test-Execution/
-│   └── TestExecutionReport.xlsx                 # Execution status tracking matrix (Initially Not Executed)
+│   └── TestExecutionReport.xlsx                 # Execution status tracking matrix
+├── Screenshots/
+│   ├── 01_ReqRes_Postman_30_Test_Cases.png      # Collection view — all 30 requests
+│   └── 02_ReqRes_Postman_Run_Result_30_Tests_3_Failures.png  # Collection Runner results
 └── Test-Summary/
     └── TestSummaryReport.md                     # Final QA test summary & coverage report
 ```
@@ -40,7 +43,8 @@ reqres-api-testing-postman/
 ## 🎯 Project Overview & Scope
 
 - **API Under Test**: ReqRes REST API (`https://reqres.in/`)
-- **Total Test Cases**: 30 Automated Postman Requests & Documented Scenarios
+- **Total Test Cases**: 30 Automated Postman Requests & Documented Scenarios (all executed via Collection Runner)
+- **Latest Run (Postman Collection Runner)**: 115 assertions evaluated — **112 passed**, **3 failed**, **0 errors** (~15.9s). See [Latest Execution Results](#-latest-execution-results-postman-collection-runner) below.
 - **Key Modules Tested**:
   1. **User Management** (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`)
   2. **Authentication & Authorization** (Register & Login - Positive & Negative)
@@ -110,6 +114,8 @@ The environment file `Postman/ReqRes-Environment.postman_environment.json` uses 
 4. Select `ReqRes-Environment` in the top-right environment dropdown.
 5. Click on the `ReqRes-API-Testing` collection and select **Run Collection**.
 
+> **Note:** Each of the 30 requests may include multiple Postman tests (assertions). A single request can therefore show both passed and failed assertions in the Runner. Report results at the **assertion level** (e.g. 112/115 passed), not as “30/30 test cases passed,” unless every assertion for every request passed.
+
 ### Option B: Running via Newman CLI
 1. Install Node.js & Newman:
    ```bash
@@ -121,6 +127,44 @@ The environment file `Postman/ReqRes-Environment.postman_environment.json` uses 
      -e Postman/ReqRes-Environment.postman_environment.json \
      -r cli,htmlextra --reporter-htmlextra-export Test-Execution/ExecutionReport.html
    ```
+
+---
+
+## 📈 Latest Execution Results (Postman Collection Runner)
+
+The following figures are from an actual **Postman Collection Runner** execution against `https://reqres.in` using this repository’s collection and environment.
+
+| Metric | Value |
+|---|---|
+| **Test cases (requests) executed** | 30 |
+| **Total assertions evaluated** | 115 |
+| **Assertions passed** | 112 |
+| **Assertions failed** | 3 |
+| **Errors** | 0 |
+| **Approximate duration** | ~15.9 seconds |
+
+**How to read these numbers:** All **30 API test cases were executed** (each collection request ran). **112 of 115 assertions passed.** Three assertions failed on three requests; this does **not** mean all 30 test cases fully passed every check.
+
+### Known / expected assertion failures (3)
+
+| Test Case | Request outcome | Failed assertion | Explanation |
+|---|---|---|---|
+| **TC09** — DELETE Existing User | Status **204** passed | `Content-Type` header check | **204 No Content** responses typically have no body; header validation written for JSON responses does not apply the same way. |
+| **TC10** — GET Delayed User Response | Status **200**; data checks passed | Response time **&lt; 2000ms** SLA | Endpoint uses `delay=3`; total response time can exceed the 2000ms threshold under real network conditions. |
+| **TC29** — DELETE Non-Existent User ID | Status **204** or **404** passed | `Content-Type` header check | Same as TC09 when the API returns **204 No Content** without a JSON body. |
+
+These failures reflect **assertion design vs. HTTP semantics / SLA on a delayed route**, not necessarily broken API behavior for the primary status and payload checks that passed.
+
+For the full written summary, see [`Test-Summary/TestSummaryReport.md`](Test-Summary/TestSummaryReport.md).
+
+---
+
+## 📸 Execution Evidence (Screenshots)
+
+| Screenshot | Description |
+|---|---|
+| [`Screenshots/01_ReqRes_Postman_30_Test_Cases.png`](Screenshots/01_ReqRes_Postman_30_Test_Cases.png) | Postman collection listing all **30** automated test cases (requests). |
+| [`Screenshots/02_ReqRes_Postman_Run_Result_30_Tests_3_Failures.png`](Screenshots/02_ReqRes_Postman_Run_Result_30_Tests_3_Failures.png) | **Collection Runner** result: 30 requests run, **112/115** assertions passed, **3** failed, **0** errors. |
 
 ---
 
@@ -165,7 +209,7 @@ The environment file `Postman/ReqRes-Environment.postman_environment.json` uses 
 
 When discussing this project in a QA Engineer technical interview:
 1. **API Testing vs UI Testing**: Explain why API testing is faster, more reliable, and catches bugs earlier in the software development lifecycle (Shift-Left testing).
-2. **Postman & JavaScript Assertions**: Detail how you validated status codes, headers (`Content-Type`), JSON keys (`id`, `email`, `token`), dynamic value data types, and latency SLA (<2000ms).
+2. **Postman & JavaScript Assertions**: Detail how you validated status codes, headers (`Content-Type`), JSON keys (`id`, `email`, `token`), dynamic value data types, and latency SLA (<2000ms). Clarify that **30 requests ran** but results are tracked as **115 assertions (112 pass, 3 fail)** — and explain the three known failures (204 `Content-Type` checks, delayed endpoint SLA).
 3. **Environment Management**: Discuss why `{{baseUrl}}` and `{{apiKey}}` placeholders were abstracted into environment files to prevent credential exposure and support multi-environment execution (Dev, Staging, Prod).
 4. **Positive vs Negative Test Scenarios**: Highlight your coverage of edge cases such as missing passwords (400 Bad Request), invalid user IDs (404 Not Found), and boundary page queries.
 5. **CI/CD Automation Readiness**: Mention how Newman CLI enables seamless integration into GitHub Actions or Jenkins pipelines.
