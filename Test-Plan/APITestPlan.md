@@ -1,32 +1,36 @@
 # API Test Plan - ReqRes REST API Testing
 
-| Project | ReqRes REST API Testing |
-|---|---|
-| **API Base URL** | `https://reqres.in` |
-| **Author** | QA Engineer (Portfolio Project) |
-| **Version** | 1.0.0 |
-| **Date** | October 2026 |
-| **Status** | Approved |
+| Project          | ReqRes REST API Testing         |
+| ---------------- | ------------------------------- |
+| **API Base URL** | `https://reqres.in`             |
+| **Author**       | QA Engineer (Portfolio Project) |
+| **Version**      | 1.0.0                           |
+| **Date**         | October 2026                    |
+| **Status**       | Approved                        |
 
 ---
 
 ## 1. Introduction & Objectives
-The purpose of this Test Plan is to define the testing scope, strategy, environment, resources, and schedule for testing the **ReqRes REST API** (`https://reqres.in/`). 
+
+The purpose of this Test Plan is to define the testing scope, strategy, environment, resources, and schedule for testing the **ReqRes REST API** (`https://reqres.in/`).
 
 ReqRes is a hosted REST API service that simulates real-world user data operations. This project aims to validate the functional accuracy, data integrity, response formats, status codes, error handling, performance (response times), and contract adherence of ReqRes endpoints using **Postman**.
 
 ### 1.1 Objectives
+
 - Ensure all API endpoints (`/api/users`, `/api/register`, `/api/login`, `/api/unknown`) behave according to standard REST specification.
 - Validate HTTP response status codes for both positive (200, 201, 204) and negative scenarios (400, 404).
 - Verify JSON schema, mandatory response keys, dynamic data types, and header values.
 - Verify robust error messages when missing required fields or supplying invalid credentials.
-- Measure API response latency to ensure SLA requirements (< 2000ms) are satisfied.
+- Measure API response latency against the < 2000ms SLA on non-delayed endpoints.
+- TC10 explicitly requests a 3-second delay and validates that configured delay instead of applying the normal-response SLA.
 
 ---
 
 ## 2. Scope of Testing
 
 ### 2.1 In-Scope
+
 1. **User Management Endpoints**:
    - `GET /api/users?page={page}` (List Users & Pagination)
    - `GET /api/users/{id}` (Single User details - Existing & Non-existing)
@@ -44,11 +48,13 @@ ReqRes is a hosted REST API service that simulates real-world user data operatio
 4. **Validation Categories**:
    - Status Code Validation
    - Response Body Field & Schema Structure Validation
-   - Header Checks (`Content-Type: application/json; charset=utf-8`)
-   - Performance / Response Time Threshold Checks (< 2000ms)
-   - Negative Testing (Invalid IDs, missing payloads, bad credentials)
+
+- Response `Content-Type` checks where a response body exists (not on 204 No Content)
+- Performance / Response Time Threshold Checks (< 2000ms for non-delayed endpoints; TC10 validates its configured 3-second delay)
+- Negative Testing (Invalid IDs, missing payloads, bad credentials)
 
 ### 2.2 Out-of-Scope
+
 - Backend application code modification or database direct querying.
 - Load testing / Heavy stress performance testing beyond basic single-request response time SLA checks.
 - Mobile UI or Web UI frontend automation.
@@ -58,28 +64,34 @@ ReqRes is a hosted REST API service that simulates real-world user data operatio
 ## 3. Test Strategy & Methodology
 
 ### 3.1 Test Automation Tool
+
 - **Postman**: Used for designing test collections, sending HTTP requests, managing environment variables, and writing JavaScript test scripts.
 - **Postman Test Runner / Newman**: CLI tool for executing the test collection in CI/CD or local automated runs.
 
 ### 3.2 Test Levels & Types
+
 - **Functional API Testing**: Verifying end-to-end user flows (e.g., login, registration, user creation).
 - **Negative Testing**: Validating failure responses when mandatory fields (`email`, `password`) are omitted or invalid parameters are supplied.
 - **Boundary & Validation Testing**: Testing non-existent resource IDs (`999`, `-1`), page numbers (`0`, `9999`).
-- **Performance SLA Testing**: Asserting that response duration does not exceed threshold limits (2000ms).
+- **Performance SLA Testing**: Asserting a response duration below 2000ms for non-delayed endpoints; TC10 checks for its configured delay of at least 3000ms.
 
 ### 3.3 Test Assertion Framework (Postman JavaScript)
-All Postman requests contain automated JavaScript assertions in the **Tests** tab covering:
+
+Postman requests contain automated JavaScript assertions in the **Tests** tab. Response-time and content-type checks are scoped to the expected HTTP behavior: 204 responses have no JSON body, and TC10 validates its deliberate three-second delay.
+
 ```javascript
 // Example assertion snippet used across collection
 pm.test("Status code is 200 OK", function () {
-    pm.response.to.have.status(200);
+  pm.response.to.have.status(200);
 });
 pm.test("Response time is less than 2000ms", function () {
-    pm.expect(pm.response.responseTime).to.be.below(2000);
+  pm.expect(pm.response.responseTime).to.be.below(2000);
 });
 pm.test("Response header Content-Type contains application/json", function () {
-    pm.response.to.have.header("content-type");
-    pm.expect(pm.response.headers.get("content-type")).to.include("application/json");
+  pm.response.to.have.header("content-type");
+  pm.expect(pm.response.headers.get("content-type")).to.include(
+    "application/json",
+  );
 });
 ```
 
@@ -88,45 +100,51 @@ pm.test("Response header Content-Type contains application/json", function () {
 ## 4. Test Environment & Configuration
 
 ### 4.1 Environment Variables
-| Variable Name | Sample / Default Value | Purpose |
-|---|---|---|
-| `{{baseUrl}}` | `https://reqres.in` | Base host URL for all API requests |
-| `{{apiKey}}` | `""` (Empty / Placeholder) | Optional API key header placeholder |
-| `{{userId}}` | `2` | Default existing user ID for GET/PUT/PATCH/DELETE |
-| `{{invalidUserId}}` | `999` | Non-existent user ID for negative scenarios |
-| `{{page}}` | `2` | Default page number for pagination |
-| `{{job}}` | `leader` | Default job title payload |
-| `{{userEmail}}` | `eve.holt@reqres.in` | Valid email for authentication tests |
-| `{{userPassword}}` | `cityslicka` | Valid password for authentication tests |
-| `{{unsuccessfulEmail}}` | `peter@klaven` | Email missing password for negative tests |
+
+| Variable Name           | Sample / Default Value | Purpose                                                |
+| ----------------------- | ---------------------- | ------------------------------------------------------ |
+| `{{baseUrl}}`           | `https://reqres.in`    | Base host URL for all API requests                     |
+| `{{apiKey}}`            | `reqres-free-v1`       | ReqRes demo API key used by the current public service |
+| `{{userId}}`            | `2`                    | Default existing user ID for GET/PUT/PATCH/DELETE      |
+| `{{invalidUserId}}`     | `999`                  | Non-existent user ID for negative scenarios            |
+| `{{page}}`              | `2`                    | Default page number for pagination                     |
+| `{{job}}`               | `leader`               | Default job title payload                              |
+| `{{userEmail}}`         | `eve.holt@reqres.in`   | Valid email for authentication tests                   |
+| `{{userPassword}}`      | `cityslicka`           | Valid password for authentication tests                |
+| `{{unsuccessfulEmail}}` | `peter@klaven`         | Email missing password for negative tests              |
 
 ---
 
 ## 5. Entry & Exit Criteria
 
 ### 5.1 Entry Criteria
+
 - ReqRes API endpoints are accessible online (`https://reqres.in/`).
 - Postman Collection and Environment files are created and validated.
 - Test Cases and Test Data documents are finalized.
 
 ### 5.2 Exit Criteria
+
 - 100% of planned 30 test cases have been executed.
 - All executed tests pass or any failed tests have logged defects in `BugReport.xlsx`.
 - Test Summary Report (`TestSummaryReport.md`) is populated and published.
+
+> The archived Collection Runner evidence covers all 30 requests. A later live rerun can be rate-limited by ReqRes (HTTP 429); rate-limited responses are environmental and must not be reported as endpoint defects without independent evidence.
 
 ---
 
 ## 6. Risk Management
 
-| Risk Description | Severity | Mitigation Strategy |
-|---|---|---|
-| ReqRes public API rate limiting or temporary downtime | High | Use retry logic, verify connectivity, or run tests with slight delays (`delay=1`). |
-| Dynamic data changes on third-party public API | Medium | Structure assertions to validate data types and mandatory schema keys rather than static dynamic values where appropriate. |
-| Potential requirement of API keys by host | Low | Configured `{{apiKey}}` environment variable placeholder to seamlessly attach headers without hardcoding real credentials. |
+| Risk Description                                      | Severity | Mitigation Strategy                                                                                                        |
+| ----------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| ReqRes public API rate limiting or temporary downtime | High     | Respect service limits and retry after the quota window; record HTTP 429 as a run limitation, not an endpoint defect.      |
+| Dynamic data changes on third-party public API        | Medium   | Structure assertions to validate data types and mandatory schema keys rather than static dynamic values where appropriate. |
+| Potential requirement of API keys by host             | Low      | Configure the ReqRes demo key in `{{apiKey}}`; keep environment configuration aligned with current host requirements.      |
 
 ---
 
 ## 7. Deliverables
+
 1. `APITestPlan.md` (This document)
 2. `ReqRes-API-Testing.postman_collection.json` (30 Requests with Postman JS Assertions)
 3. `ReqRes-Environment.postman_environment.json`
